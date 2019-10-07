@@ -30,4 +30,4 @@ serve_static:
 sms_server:
 	$(GOCMD) run sms_main.go
 build_linux:
-env GOOS=linux GOARCH=arm go build -v github.com/path/to/your/app
+	env GOOS=linux GOARCH=arm go build -v github.com/path/to/your/app
