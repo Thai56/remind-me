@@ -17,7 +17,8 @@ clean:
 		rm -f $(BINARY_NAME)
 		rm -f $(BINARY_UNIX)
 run:
-		$(GOBUILD) -v ./...
+		make clean
+		$(GOBUILD) -v .
 		./$(BINARY_NAME)
 deps:
 		$(GOGET) github.com/markbates/goth

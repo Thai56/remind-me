@@ -24,6 +24,6 @@
 - [ ] Handle Errors
 
 ### Controlling the App 
-  - [ ] `make sms_server` - runs our sms application, if this fails we need to check the configs.
+  - [ ] `make run` - runs our sms application, if this fails we need to check the configs.
   - [ ] `make serve_static` - Spins up Web Server. Will find out what port is occupying `:80` and kill it if true before allocating it.
 
