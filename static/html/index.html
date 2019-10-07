@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        #reminder-content{
+            margin: 10px 10px;
+            width: 30%;
+            height: 10vh;
+        }
+
+        #send-success{
+            color:lightseagreen;
+        }
+    </style>
+</head>
+<body>
+    <h4>Welcome to Reminders</h4>
+    <form id="reminder-settings">
+        <div id="destination-wrapper">            
+            <label for="destination">Destination:</label>
+            <input type="text" id="destination" v-model="destination">
+        </div><br/>
+        <div id="reminder-date"> 
+            <label for="reminder-date">Date:</label>
+            <input type="date" id="reminder-date" v-model="currentDate">
+            <label for="reminder-time">Time:</label>
+            <input type="time" id="reminder-time" v-model="currentTime" required>
+        </div>
+        
+        <textarea id="reminder-content" v-model="content" placeholder="do the dishes..."></textarea>
+        <label v-show="responseSaved" id="send-success">Reminder Successful</label>
+        <button v-on:click="sendReminder">Send</button>
+    </form> 
+</body>
+<script src="https://unpkg.com/vue"></script>
+
+<script type='text/javascript'>
+    let currentTime = formatTime(new Date());
+    function getDefaultState() {
+        return {
+            currentDate: formatDate(new Date()),
+            currentTime: currentTime,
+            content: "",
+            destination: '7073866800',
+            errWithSend: false,
+            responseSaved: false,
+        };
+    }
+    console.log("currentTime", currentTime);
+    new Vue({
+        el: '#reminder-settings',
+        data: this.getDefaultState(),
+        methods: {
+            sendReminder: async function (event) {
+                event.preventDefault();
+                try {
+                    const timeData = this.currentTime.slice().split(":");
+                    const hours = timeData[0];
+                    const minutes = timeData[1];
+
+                    const currentDate = this.currentDate.slice();
+                    const formattedDate = formatMMDDYYY(currentDate);
+                    const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
+                    const body = {
+                        name: "Kia",
+                        destination: this.destination,
+                        content: this.content,
+                        expire: date.getTime(),
+                    };
+                    const request = {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*',
+                        },  
+                        body: JSON.stringify(body),
+                    };
+                    const response = await fetch('http://localhost:8080/remind', request);
+                    const myJson = await response.json();
+                    console.log("res", JSON.stringify(myJson));
+                    
+                    this.triggerSuccess();
+                    // this.resetState();
+                } catch (err){
+                    console.error(err);
+                    this.triggerError();
+                }
+                
+            },
+            triggerError: function () {
+                this.errWithSend = true;
+                setTimeout(() => {
+                    this.errWithSend = false
+                }, 8000);
+            },
+            triggerSuccess: function () {
+                this.responseSaved = true;
+                setTimeout(() => {
+                    this.responseSaved = false
+                }, 5000);
+            },
+            resetState: function() {
+                const defaultState = getDefaultState()
+                for (key in defaultState) {
+                    this[key] = defaultState[key];
+                }
+            }
+        }
+    });
+ 
+    // ------------ //
+    // Date Helpers //
+    // ------------ //
+    
+    function formatTime(date) {
+        const d = new Date(date); 
+        const hours = d.getHours();
+        const minutes = d.getMinutes();
+        const seconds = d.getSeconds();
+    
+        return `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}:${seconds < 10 ? `0${seconds}` : seconds}`
+    }
+
+    function formatDate(date) {
+        let d = new Date(date),
+            month = '' + (d.getMonth() + 1),
+            day = '' + d.getDate(),
+            year = d.getFullYear();
+
+        if (month.length < 2) 
+            month = '0' + month;
+        if (day.length < 2) 
+            day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
+
+    function getAsDate(day, time) {
+        var hours = Number(time.match(/^(\d+)/)[1]);
+        var minutes = Number(time.match(/:(\d+)/)[1]);
+        var AMPM = time.match(/\s(.*)$/)[1];
+        if(AMPM == "pm" && hours<12) hours = hours+12;
+        if(AMPM == "am" && hours==12) hours = hours-12;
+        var sHours = hours.toString();
+        var sMinutes = minutes.toString();
+        if(hours<10) sHours = "0" + sHours;
+        if(minutes<10) sMinutes = "0" + sMinutes;
+        time = sHours + ":" + sMinutes + ":00";
+        var d = new Date(day);
+        var n = d.toISOString().substring(0,10);
+        var newDate = new Date(n+"T"+time);
+        console.log("returning new date", newDate);
+        return newDate;
+    }
+
+    function formatAMPM(hours, minutes) {
+        var ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        minutes = minutes < 10 ? '0'+minutes : minutes;
+        var strTime = hours + ':' + minutes + ' ' + ampm;
+        return strTime;
+    }
+
+    function formatMMDDYYY(date) {
+        date = date.split("-")
+        const month = date[1];
+        const year = date[0];
+        const day = date[2];
+
+        return `${month}/${day}/${year}`;
+    }
+</script>
+</html>

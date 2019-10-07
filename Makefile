@@ -1,0 +1,30 @@
+# Go parameters
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+GOGET=$(GOCMD) get
+BINARY_NAME=sms
+BINARY_UNIX=$(BINARY_NAME)_unix
+
+all: test build
+build: 
+		$(GOBUILD) -o$(BINARY_NAME) -v
+test: 
+		$(GOTEST) -v ./...
+clean: 
+		$(GOCLEAN)
+		rm -f $(BINARY_NAME)
+		rm -f $(BINARY_UNIX)
+run:
+		$(GOBUILD) -v ./...
+		./$(BINARY_NAME)
+deps:
+		$(GOGET) github.com/markbates/goth
+		$(GOGET) github.com/markbates/pop
+serve_static:		
+		./stop_serving.sh
+		docker build -t webserver-image:v1 .
+		docker run -d -p 80:80 webserver-image:v1
+sms_server:
+	$(GOCMD) run sms_main.go
