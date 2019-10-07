@@ -22,7 +22,7 @@
 </head>
 <body>
     <h4>Welcome to Reminders</h4>
-    <form id="reminder-settings">
+    <div id="reminder-settings">
         <div id="destination-wrapper">            
             <label for="destination">Destination:</label>
             <input type="text" id="destination" v-model="destination">
@@ -37,7 +37,7 @@
         <textarea id="reminder-content" v-model="content" placeholder="do the dishes..."></textarea>
         <label v-show="responseSaved" id="send-success">Reminder Successful</label>
         <button v-on:click="sendReminder">Send</button>
-    </form> 
+    </div>
 </body>
 <script src="https://unpkg.com/vue"></script>
 
@@ -83,6 +83,7 @@
                         },  
                         body: JSON.stringify(body),
                     };
+                    // TODO: make the host a env var
                     const response = await fetch('http://localhost:8080/remind', request);
                     const myJson = await response.json();
                     console.log("res", JSON.stringify(myJson));
