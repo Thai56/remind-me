@@ -29,3 +29,5 @@ serve_static:
 		docker run -d -p 80:80 webserver-image:v1
 sms_server:
 	$(GOCMD) run sms_main.go
+build_linux:
+env GOOS=linux GOARCH=arm go build -v github.com/path/to/your/app
