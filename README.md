@@ -22,6 +22,8 @@
     - [ ] Create Issues when arise.
 - [ ] Set Up Logging
 - [ ] Handle Errors
+- [ ] Garbage handler for db expired calls past due
+
 
 ### Controlling the App 
   - [ ] `make run` - runs our sms application, if this fails we need to check the configs.
