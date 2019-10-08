@@ -85,7 +85,6 @@
                     console.log("res", JSON.stringify(myJson));
                     
                     this.triggerSuccess();
-                    this.resetState();
                 } catch (err){
                     this.triggerError(err);
                 }
@@ -101,6 +100,7 @@
                 this.responseSaved = true;
                 setTimeout(() => {
                     this.responseSaved = false;
+
                 }, 5000);
             },
             resetState: function() {

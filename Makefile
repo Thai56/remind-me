@@ -16,18 +16,17 @@ clean:
 		$(GOCLEAN)
 		rm -f $(BINARY_NAME)
 		rm -f $(BINARY_UNIX)
-run:
 		make clean
 		$(GOBUILD) -v .
 		./$(BINARY_NAME)
-deps:
-		$(GOGET) github.com/markbates/goth
-		$(GOGET) github.com/markbates/pop
+# deps:
+		# $(GOGET) github.com/markbates/goth
+		# $(GOGET) github.com/markbates/pop
 serve_static:		
 		./stop_serving.sh
-		docker build -t webserver-image:v1 .
+		docker build -f Dockerfile.web -t webserver-image:v1 .
 		docker run -d -p 80:80 webserver-image:v1
 sms_server:
 	$(GOCMD) run sms_main.go
 build_linux:
-	env GOOS=linux GOARCH=arm go build -v github.com/path/to/your/app
+	env GOOS=linux GOARCH=arm go build -v github.com/user/sms
