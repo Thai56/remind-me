@@ -18,6 +18,10 @@
         #send-success{
             color:lightseagreen;
         }
+
+        #send-failure{
+            color: indianred;
+        }
     </style>
 </head>
 <body>
@@ -35,25 +39,25 @@
         </div>
         
         <textarea id="reminder-content" v-model="content" placeholder="do the dishes..."></textarea>
-        <label v-show="responseSaved" id="send-success">Reminder Successful</label>
+        <label id="send-success" v-show="responseSaved">Reminder Successful</label>
+        <div id="send-failure" v-show="errWithSend">Failed To Send Reminder: {{ errWithSend }}</div>
         <button v-on:click="sendReminder">Send</button>
     </div>
 </body>
 <script src="https://unpkg.com/vue"></script>
 
 <script type='text/javascript'>
-    let currentTime = formatTime(new Date());
     function getDefaultState() {
         return {
             currentDate: formatDate(new Date()),
-            currentTime: currentTime,
+            currentTime: formatTime(new Date()),
             content: "",
             destination: '7073866800',
-            errWithSend: false,
+            errWithSend: "",
             responseSaved: false,
         };
     }
-    console.log("currentTime", currentTime);
+
     new Vue({
         el: '#reminder-settings',
         data: this.getDefaultState(),
@@ -61,18 +65,11 @@
             sendReminder: async function (event) {
                 event.preventDefault();
                 try {
-                    const timeData = this.currentTime.slice().split(":");
-                    const hours = timeData[0];
-                    const minutes = timeData[1];
-
-                    const currentDate = this.currentDate.slice();
-                    const formattedDate = formatMMDDYYY(currentDate);
-                    const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
                     const body = {
                         name: "Kia",
                         destination: this.destination,
                         content: this.content,
-                        expire: date.getTime(),
+                        expire: this.getUIDateTime(),
                     };
                     const request = {
                         method: 'POST',
@@ -83,29 +80,27 @@
                         },  
                         body: JSON.stringify(body),
                     };
-                    // TODO: make the host a env var
                     const response = await fetch('http://localhost:8080/remind', request);
                     const myJson = await response.json();
                     console.log("res", JSON.stringify(myJson));
                     
                     this.triggerSuccess();
-                    // this.resetState();
+                    this.resetState();
                 } catch (err){
-                    console.error(err);
-                    this.triggerError();
+                    this.triggerError(err);
                 }
                 
             },
-            triggerError: function () {
-                this.errWithSend = true;
+            triggerError: function (err) {
+                this.errWithSend = `${err}`;
                 setTimeout(() => {
-                    this.errWithSend = false
+                    this.errWithSend = "";
                 }, 8000);
             },
             triggerSuccess: function () {
                 this.responseSaved = true;
                 setTimeout(() => {
-                    this.responseSaved = false
+                    this.responseSaved = false;
                 }, 5000);
             },
             resetState: function() {
@@ -113,6 +108,23 @@
                 for (key in defaultState) {
                     this[key] = defaultState[key];
                 }
+            },
+            getUIDateTime: function() {
+                const timeData = this.currentTime.slice().split(":");
+                const hours = timeData[0];
+                const minutes = timeData[1];
+
+                const currentDate = this.currentDate.slice();
+                const formattedDate = formatMMDDYYY(currentDate);
+                const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
+
+                if (date.getTime() < new Date().getTime()) {
+                    return new ErrObj(`Time has been surpassed ${new Date(date.getTime())}`)
+                        .log()
+                        .throw();
+                }
+
+                return date.getTime();
             }
         }
     });
@@ -179,5 +191,28 @@
 
         return `${month}/${day}/${year}`;
     }
+
+
+    // ============ //
+    // ERROR HELPER //
+    // ============ //
+
+    function ErrObj(message) {
+        this.message = message;
+    }
+
+    ErrObj.prototype.log = function() {
+        console.error(this.message);
+        return this;
+    }
+
+    ErrObj.prototype.throw = function() {
+        throw this.message;
+    }
+
+    ErrObj.prototype.message = function() {
+        return `${this.message}`;
+    }
+
 </script>
 </html>
