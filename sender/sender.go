@@ -21,6 +21,10 @@ type Sender struct {
 	redisClient redis.Conn
 }
 
+func (s *Sender) Ping() (string, error) {
+	return redis.String(s.redisClient.Do("PING"))
+}
+
 func New(name string) *Sender {
 	c, err := redis.Dial("tcp", "127.0.0.1:6379")
 	if err != nil {
@@ -109,12 +113,8 @@ func (s *Sender) SetKeyWithExpire(destination, message string, expireTime int64)
 		return fmt.Errorf("Failed To expire the key : %s :%s : ", uuID, err)
 	}
 
-	// metaData, err := s.GetMetaDataFor(uuID)
-	// if err != nil || metaData.Destination == "" {
-	// 	return fmt.Errorf("Could Not Get Metadata for key : %s :%s", uuID, err)
-	// }
+	// logMsg := fmt.Sprintf("Set key %s to expire at %s", shadowKey[len(shadowKey)-4:], convert.UnixToTimestamp(fmt.Sprintf("%d", expireTime)))
 
-	// fmt.Println("Metadata")
 
 	return nil
 }

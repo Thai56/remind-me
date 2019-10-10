@@ -6,6 +6,7 @@ import (
 
 	redis "github.com/garyburd/redigo/redis"
 	"github.com/user/sms/sender"
+	convert "github.com/user/sms/commons/convertor"
 )
 
 type Subscriber struct {
@@ -37,25 +38,24 @@ func (rc *Subscriber) Run() {
 	fmt.Println(conn)
 	rc.mRedisConn.Do("CONFIG", "SET", "notify-keyspace-events", "KEA")
 
-	fmt.Println("Set the notify-keyspace-events to KEA")
 	defer rc.mRedisConn.Close()
 
 	psc := redis.PubSubConn{Conn: rc.mRedisConn}
 	psc.PSubscribe("__key*__:*")
+
 	for {
 		switch msg := psc.Receive().(type) {
 		case redis.Message:
 			fmt.Printf("Message: %s %s\n", msg.Channel, msg.Data)
 		case redis.PMessage:
-			fmt.Printf("PMessage : pattern: %s \n Channel : %s \n Data : %s\n", msg.Pattern, msg.Channel, msg.Data)
-			// keyname : thai:7073447433:MESSAGE_HASH
-			// Get the message using hash as key
+			// fmt.Printf("PMessage : pattern: %s \n Channel : %s \n Data : %s\n", msg.Pattern, msg.Channel, msg.Data)
 
 			if chanSlice := strings.Split(msg.Channel, ":"); chanSlice[len(chanSlice)-1] == "expired" {
-				// Locate the key
-				messageData := fmt.Sprintf("%s", msg.Data)
-				key := fmt.Sprintf("%s", strings.Split(messageData, ":")[len(strings.Split(messageData, ":"))-1])
-				fmt.Println("EXIPIRED - message data", key)
+				key := getKeySuffixFrom(msg.Data)
+				
+				logMsg := fmt.Sprintf("Key %s Expired at %s", key[len(key)-4:], convert.Timestamp())
+				fmt.Println(logMsg)
+				
 				metadata, err := rc.sender.GetMetaDataFor(key)
 				if err != nil {
 					fmt.Println(fmt.Sprintf("%s", err))
@@ -89,6 +89,11 @@ func (rc *Subscriber) Run() {
 			return
 		}
 	}
+}
+
+func getKeySuffixFrom(msg []byte) string {
+	messageData := fmt.Sprintf("%s", msg)
+	return fmt.Sprintf("%s", strings.Split(messageData, ":")[len(strings.Split(messageData, ":"))-1])
 }
 
 // QueueReminderFor - creates an expire key <user_sid:phone_number:message_hash>

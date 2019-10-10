@@ -13,12 +13,9 @@ func main() {
 	app := New("sms")
 	app.store.InitUserData()
 	app.subscriber.RegisterSender(app.sender)
-	// for i, entity := range app.store.GetEntities() {
-	// 	keyExists, err := app.sender.SetKeyWithExpire(entity.Sid, fmt.Sprintf("Hello World - %d", i), 2)
-	// 	fmt.Println(fmt.Sprintf("sms MAIN - key : %d : %+v : %s", i, keyExists, err))
-	// }
 	smsAPI := api.New("sms")
 	smsAPI.RegisterSubscriber(app.subscriber)
+	smsAPI.RegisterSender(app.sender)
 	go smsAPI.Serve()
 	app.subscriber.Run()
 	return

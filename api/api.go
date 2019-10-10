@@ -7,18 +7,18 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/user/sms/subscriber"
+	"github.com/user/sms/sender"
 )
 
 type Api struct {
 	name string
-	// client     *http.Server
 	subscriber *subscriber.Subscriber
+	sender *sender.Sender
 }
 
 func New(name string) *Api {
 	a := &Api{
 		name: name,
-		// client: &http.Server{},
 	}
 
 	return a
@@ -28,11 +28,16 @@ func (a *Api) RegisterSubscriber(s *subscriber.Subscriber) {
 	a.subscriber = s
 }
 
+func  (a *Api) RegisterSender(s *sender.Sender) {
+	a.sender = s
+}
+
 func (a *Api) Serve() {
 	r := mux.NewRouter()
 	r.HandleFunc("/Hello", sayHello)
 	r.HandleFunc("/", sayHello)
 	r.HandleFunc("/remind", a.remind).Methods("POST")
+	r.HandleFunc("/ping", a.pingRedis).Methods("GET")
 
 	corsOpts := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"}, //you service is available and allowed for this base url

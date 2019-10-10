@@ -14,21 +14,22 @@ type Message struct {
 	ExpireTime  int64  `json:"expire"`
 }
 
-func (a *Api) remind(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+func (a *Api) pingRedis(w http.ResponseWriter, r *http.Request) {
+	res, err := a.sender.Ping()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 
+	w.Write([]byte(res))
+}
+
+func (a *Api) remind(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 
 	var msg Message
 	err := decoder.Decode(&msg)
-
-	// output, err := json.Marshal(msg)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), 500)
-	// 	return
-	// }
 
 	fmt.Println("MESSAGE:", r.Body, msg.Sid, msg.Content, msg.Destination, msg.ExpireTime)
 	err = a.subscriber.QueueReminderFor(msg.Content, msg.Destination, msg.ExpireTime)

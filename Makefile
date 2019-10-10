@@ -16,6 +16,7 @@ clean:
 		$(GOCLEAN)
 		rm -f $(BINARY_NAME)
 		rm -f $(BINARY_UNIX)
+run:
 		make clean
 		$(GOBUILD) -v .
 		./$(BINARY_NAME)
@@ -30,3 +31,5 @@ sms_server:
 	$(GOCMD) run sms_main.go
 build_linux:
 	env GOOS=linux GOARCH=arm go build -v github.com/user/sms
+redis:
+	docker run -d -p 6379:6379 redis-server /conf/redis/redis1.conf
