@@ -1,135 +1,304 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-        #reminder-content{
-            margin: 10px 10px;
-            width: 30%;
-            height: 10vh;
-        }
-
-        #send-success{
-            color:lightseagreen;
-        }
-
-        #send-failure{
-            color: indianred;
-        }
-    </style>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
 </head>
 <body>
-    <h4>Welcome to Reminders</h4>
-    <div id="reminder-settings">
-        <div id="destination-wrapper">            
-            <label for="destination">Destination:</label>
-            <input type="text" id="destination" v-model="destination">
-        </div><br/>
-        <div id="reminder-date"> 
-            <label for="reminder-date">Date:</label>
-            <input type="date" id="reminder-date" v-model="currentDate">
-            <label for="reminder-time">Time:</label>
-            <input type="time" id="reminder-time" v-model="currentTime" required>
-        </div>
-        
-        <textarea id="reminder-content" v-model="content" placeholder="do the dishes..."></textarea>
-        <label id="send-success" v-show="responseSaved">Reminder Successful</label>
-        <div id="send-failure" v-show="errWithSend">Failed To Send Reminder: {{ errWithSend }}</div>
-        <button v-on:click="sendReminder">Send</button>
-    </div>
-</body>
-<script src="https://unpkg.com/vue"></script>
+  <div id="app">
+   
+    <template>
+      <v-app id="sandbox">
+        <v-navigation-drawer
+          v-model="primaryDrawer.model"
+          :clipped="primaryDrawer.clipped"
+          :floating="primaryDrawer.floating"
+          :mini-variant="primaryDrawer.mini"
+          :permanent="primaryDrawer.type === 'permanent'"
+          :temporary="primaryDrawer.type === 'temporary'"
+          app
+          overflow
+        ></v-navigation-drawer>
 
-<script type='text/javascript'>
-    function getDefaultState() {
-        return {
-            currentDate: formatDate(new Date()),
-            currentTime: formatTime(new Date()),
-            content: "",
-            destination: '7073866800',
-            errWithSend: "",
-            responseSaved: false,
-        };
+        <v-app-bar
+          :clipped-left="primaryDrawer.clipped"
+          app
+        >
+          <v-app-bar-nav-icon
+            v-if="primaryDrawer.type !== 'permanent'"
+            @click.stop="primaryDrawer.model = !primaryDrawer.model"
+          ></v-app-bar-nav-icon>
+          <v-toolbar-title>Remind Me</v-toolbar-title>
+        </v-app-bar>
+
+        <v-content>
+          <v-container fluid>
+            <v-row
+              align="center"
+              justify="center"
+            >
+              <v-col cols="10">
+                <v-card>
+                  <v-card-text>
+                    <v-row>
+                      <!-- Choose Destination Column -->
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
+                        <span>Choose Destination</span>
+                          <div v-for="user in users">
+                            <v-switch
+                              primary
+                              :label="user.name"
+                              :input-value="user.checked"
+                            ></v-switch>
+                          </div>
+
+                        <!-- Text Area -->
+                        <v-textarea
+                          v-model="model"
+                          label="Message"
+                          :auto-grow="autoGrow"
+                          :clearable="clearable"
+                          :counter="counter ? counter : false"
+                          :filled="filled"
+                          :flat="flat"
+                          :hint="hint"
+                          :label="label"
+                          :loading="loading"
+                          :no-resize="noResize"
+                          :outlined="outlined"
+                          :persistent-hint="persistentHint"
+                          :placeholder="placeholder"
+                          :rounded="rounded"
+                          :row-height="rowHeight"
+                          :rows="rows"
+                          :shaped="shaped"
+                          :single-line="singleLine"
+                          :solo="solo"
+                        ></v-textarea>
+                      </v-col>
+
+                       <v-col
+                        cols="12"
+                        md="6"
+                      >
+                        <!-- Choose Date  -->
+                        <span>Pick Date</span>
+                        <v-menu
+                          ref="nowMenu"
+                          v-model="nowMenu"
+                          :close-on-content-click="false"
+                          :nudge-right="40"
+                          :return-value.sync="now"
+                          transition="scale-transition"
+                          min-width="290px"
+                          offset-y
+                          full-width
+                        >
+                          <template v-slot:activator="{ on }">
+                            <v-text-field
+                              v-model="now"
+                              label="Today"
+                              readonly
+                              v-on="on"
+                            ></v-text-field>
+                          </template>
+                          <v-date-picker
+                            v-model="now"
+                            no-title
+                            scrollable
+                          >
+                            <div class="flex-grow-1"></div>
+                            <v-btn
+                              text
+                              color="primary"
+                              @click="nowMenu = false"
+                            >
+                              Cancel
+                            </v-btn>
+                            <v-btn
+                              text
+                              color="primary"
+                              @click="$refs.nowMenu.save(now)"
+                            >
+                              OK
+                            </v-btn>
+                          </v-date-picker>
+                        </v-menu>
+
+                         <!-- Choose Time  -->
+                        <span>Pick Time</span>
+                        <template>
+                          <v-row align="center">
+                            <v-time-picker
+                              v-model="picker"
+                              class="mt-2"
+                              :disabled="disabled"
+                              :readonly="readonly"
+                              :landscape="landscape"
+                              :ampm-in-title="ampmInTitle"
+                              :use-seconds="useSeconds"
+                              :format="format"
+                              :full-width="fullWidth"
+                              :no-title="noTitle"
+                              :scrollable="scrollable"
+                            ></v-time-picker>
+                          </v-row>
+                        </template>
+
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                  <v-card-actions>
+                    <div class="flex-grow-1"></div>
+                    <v-btn text>Cancel</v-btn>
+                    <v-btn
+                      text
+                      color="primary"
+                    >Submit</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-content>
+
+        <v-footer
+          :inset="footer.inset"
+          app
+        >
+          <span class="px-4">&copy; {{ new Date().getFullYear() }}</span>
+        </v-footer>
+      </v-app>
+    </template>
+
+  </div>
+
+<!--Vue Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+
+  <!-- Source JS -->
+  <script>
+    // ====================== //
+    // Business Logic Helpers //
+    // ====================== //
+    function User(name, number, checked=false) {
+        this.name = name;
+        this.number = number;
+        this.checked = checked;
     }
 
-    new Vue({
-        el: '#reminder-settings',
-        data: this.getDefaultState(),
-        methods: {
-            sendReminder: async function (event) {
-                event.preventDefault();
-                try {
-                    const body = {
-                        name: "Kia",
-                        destination: this.destination,
-                        content: this.content,
-                        expire: this.getUIDateTime(),
-                    };
-                    const request = {
-                        method: 'POST',
-                        mode: 'cors',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Access-Control-Allow-Origin': '*',
-                        },  
-                        body: JSON.stringify(body),
-                    };
-                    const response = await fetch('http://localhost:8080/remind', request);
-                    const myJson = await response.json();
-                    console.log("res", JSON.stringify(myJson));
-                    
-                    this.triggerSuccess();
-                } catch (err){
-                    this.triggerError(err);
-                }
-                
-            },
-            triggerError: function (err) {
-                this.errWithSend = `${err}`;
-                setTimeout(() => {
-                    this.errWithSend = "";
-                }, 8000);
-            },
-            triggerSuccess: function () {
-                this.responseSaved = true;
-                setTimeout(() => {
-                    this.responseSaved = false;
-
-                }, 5000);
-            },
-            resetState: function() {
-                const defaultState = getDefaultState()
-                for (key in defaultState) {
-                    this[key] = defaultState[key];
-                }
-            },
-            getUIDateTime: function() {
-                const timeData = this.currentTime.slice().split(":");
-                const hours = timeData[0];
-                const minutes = timeData[1];
-
-                const currentDate = this.currentDate.slice();
-                const formattedDate = formatMMDDYYY(currentDate);
-                const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
-
-                if (date.getTime() < new Date().getTime()) {
-                    return new ErrObj(`Time has been surpassed ${new Date(date.getTime())}`)
-                        .log()
-                        .throw();
-                }
-
-                return date.getTime();
-            }
+    function getLabelForTextArea(users) {
+      let result = "";
+      for ([i, user] in users) {
+        if (user.checked) {
+          result += user.name;
         }
-    });
- 
-    // ------------ //
+      }
+
+      return result;
+    }
+  </script>
+  
+  <script> 
+    // ============== //
+    // Default States //
+    // ============== //
+    const stateDefaults = {
+      getReminderDefaults() {
+        return {
+          currentDate: formatDate(new Date()),
+          currentTime: formatTime(new Date()),
+          content: "",
+          destination: '7073866800',
+          errWithSend: "",
+          responseSaved: false,
+        };
+      },
+      getUserDefaults() {
+        return {
+          users: {
+            thai: new User("Thai", "7073447433", true),
+            chipsta: new User("Chipi", "7073866800"),
+          },
+        };
+      },
+      getDatePickerDefaults() {
+        return {
+          nowMenu: false,
+          now: null,
+        };
+      },
+      getTimePickerDefaults() {
+        return {
+          picker: null,
+          disabled: false,
+          readonly: false,
+          landscape: true,
+          ampmInTitle: true,
+          useSeconds: false,
+          format: 'ampm',
+          fullWidth: false,
+          noTitle: false,
+          scrollable: true,
+        };
+      },
+      getTextAreaDefaults() {
+        return {
+          autoGrow: true,
+          autofocus: true,
+          clearable: true,
+          counter: 0,
+          filled: true,
+          flat: false,
+          hint: '',
+          label: getLabelForTextArea(this.users),
+          loading: false,
+          model: '',
+          noResize: false,
+          outlined: false,
+          persistentHint: false,
+          placeholder: 'do the dishes...',
+          rounded: false,
+          rowHeight: 24,
+          rows: 1,
+          shaped: false,
+          singleLine: false,
+          solo: false,
+        };
+      },
+      getLayoutDefaults() {
+        return {
+          drawers: ['Default (no property)', 'Permanent', 'Temporary'],
+          primaryDrawer: {
+            model: null,
+            type: 'default (no property)',
+            clipped: false,
+            floating: false,
+            mini: false,
+          }
+        };
+      },
+      getFooterDefaults() {
+        return {
+          footer: {
+              inset: false,
+          },
+        };
+      },
+    }
+  </script>
+
+  <script>
+  // ===================== //
+  // Date and Time Helpers //
+  // ===================== //
+   // ------------ //
     // Date Helpers //
     // ------------ //
     
@@ -191,28 +360,116 @@
 
         return `${month}/${day}/${year}`;
     }
+  </script>
 
+  <script>
+  // ================= //
+  // Vue Logic Helpers //
+  // ================= //
+  new Vue({
+    el: '#app',
+    vuetify: new Vuetify({
+      theme: {
+        dark: true,
+      },
+    }),
+    data: () => ({
+      ...stateDefaults.getReminderDefaults(),
+      ...stateDefaults.getUserDefaults(),
+      ...stateDefaults.getDatePickerDefaults(),
+      ...stateDefaults.getTimePickerDefaults(),
+      ...stateDefaults.getTextAreaDefaults(),
+      ...stateDefaults.getLayoutDefaults(),
+      ...stateDefaults.getFooterDefaults(),
+    }),
+    methods: {
+      sendReminder: async function (event) {
+        event.preventDefault();
+        try {
+            const body = {
+                name: "Username",
+                destination: this.getDestination(),
+                content: this.getContent(),
+                expire: this.getUIDateTime(),
+            };
+            const request = {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },  
+                body: JSON.stringify(body),
+            };
+            const response = await fetch('http://localhost:8080/remind', request);
+            const myJson = await response.json();
+            console.log("res", JSON.stringify(myJson));
+            
+            this.triggerSuccess();
+        } catch (err){
+            this.triggerError(err);
+        }
+        
+    },
+    triggerError: function (err) {
+        this.errWithSend = `${err}`;
+        setTimeout(() => {
+            this.errWithSend = "";
+        }, 8000);
+    },
+    triggerSuccess: function () {
+        this.responseSaved = true;
+        setTimeout(() => {
+            this.responseSaved = false;
 
-    // ============ //
-    // ERROR HELPER //
-    // ============ //
+        }, 5000);
+    },
+    resetState: function() {
+        const defaultState = getDefaultState()
+        for (key in defaultState) {
+            this[key] = defaultState[key];
+        }
+    },
+    getUIDateTime: function() {
+        const timeData = this.currentTime.slice().split(":");
+        const hours = timeData[0];
+        const minutes = timeData[1];
 
-    function ErrObj(message) {
-        this.message = message;
-    }
+        const currentDate = this.currentDate.slice();
+        const formattedDate = formatMMDDYYY(currentDate);
+        const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
 
-    ErrObj.prototype.log = function() {
-        console.error(this.message);
-        return this;
-    }
+        if (date.getTime() < new Date().getTime()) {
+            return new ErrObj(`Time has been surpassed ${new Date(date.getTime())}`, this.currentTime)
+                .log()
+                .throw();
+        }
 
-    ErrObj.prototype.throw = function() {
-        throw this.message;
-    }
+        return date.getTime();
+    },
+    getDestination: function() {
+        if (this.destination.length !== getDefaultState().destination.length) {
+            return new ErrObj(
+                'Failed precondition. Please check the destination phone number.',
+                this.destination
+            ).log().throw();
+        }
 
-    ErrObj.prototype.message = function() {
-        return `${this.message}`;
-    }
+        return this.destination;
+    },
+    getContent: function() {
+        if (!this.content) {
+            return new ErrObj(
+                'Failed precondition. Please check the message content textbox.',
+                this.content
+            ).log().throw();
+        }
 
-</script>
+        return this.content;
+    },
+    },
+  })
+    
+  </script>
+</body>
 </html>
