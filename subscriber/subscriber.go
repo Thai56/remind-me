@@ -3,16 +3,16 @@ package subscriber
 import (
 	"fmt"
 	"strings"
+	"log"
 
 	redis "github.com/garyburd/redigo/redis"
-	"github.com/user/sms/sender"
-	convert "github.com/user/sms/commons/convertor"
 )
+type ReminderFunc func(string) error
 
 type Subscriber struct {
 	mRedisServer string
 	mRedisConn   redis.Conn
-	sender       *sender.Sender
+	remindMethod  ReminderFunc
 }
 
 // New - Returns an instance of new Redis Client and Connection.
@@ -22,8 +22,8 @@ func New(server string) *Subscriber {
 	}
 }
 
-func (rc *Subscriber) RegisterSender(s *sender.Sender) {
-	rc.sender = s
+func (rc *Subscriber) RegisterReminder(s ReminderFunc) {
+	rc.remindMethod = s
 }
 
 // Run - Connects to redis then enables "notify-keyspace-events".
@@ -48,36 +48,16 @@ func (rc *Subscriber) Run() {
 		case redis.Message:
 			fmt.Printf("Message: %s %s\n", msg.Channel, msg.Data)
 		case redis.PMessage:
-			// fmt.Printf("PMessage : pattern: %s \n Channel : %s \n Data : %s\n", msg.Pattern, msg.Channel, msg.Data)
+			// log.Debug("PMessage : pattern: %s \n Channel : %s \n Data : %s\n", msg.Pattern, msg.Channel, msg.Data)
 
 			if chanSlice := strings.Split(msg.Channel, ":"); chanSlice[len(chanSlice)-1] == "expired" {
-				key := getKeySuffixFrom(msg.Data)
+				messageData := fmt.Sprintf("%s", msg.Data)
+				key := fmt.Sprintf("%s", strings.Split(messageData, ":")[len(strings.Split(messageData, ":"))-1])
 				
-				logMsg := fmt.Sprintf("Key %s Expired at %s", key[len(key)-4:], convert.Timestamp())
-				fmt.Println(logMsg)
+				logMsg := fmt.Sprintf("Key %s Expired", key[len(key)-4:])
+				log.Println(logMsg)	
 				
-				metadata, err := rc.sender.GetMetaDataFor(key)
-				if err != nil {
-					fmt.Println(fmt.Sprintf("%s", err))
-					return
-				}
-
-				if metadata.Destination == "" {
-					fmt.Println("No Destination found for key : ", key)
-				}
-
-				fmt.Println("sending message", metadata)
-				err = rc.sender.SendMessage(metadata.Destination, metadata.Message)
-				if err != nil {
-					fmt.Println("Failed to send message for %s", metadata.Destination)
-					return
-				}
-
-				err = rc.sender.RemoveAllInstancesOf(key)
-				if err != nil {
-					fmt.Println("Failed to delete key for %s : %s", key, err)
-					return
-				}
+				rc.remindMethod(key)
 			}
 		case redis.Subscription:
 			fmt.Printf("Subscription: %s %s %d\n", msg.Kind, msg.Channel, msg.Count)
@@ -89,20 +69,4 @@ func (rc *Subscriber) Run() {
 			return
 		}
 	}
-}
-
-func getKeySuffixFrom(msg []byte) string {
-	messageData := fmt.Sprintf("%s", msg)
-	return fmt.Sprintf("%s", strings.Split(messageData, ":")[len(strings.Split(messageData, ":"))-1])
-}
-
-// QueueReminderFor - creates an expire key <user_sid:phone_number:message_hash>
-// stores the message under the hash key
-func (rc *Subscriber) QueueReminderFor(message, destination string, expireTime int64) error {
-	err := rc.sender.SetKeyWithExpire(destination, message, expireTime)
-	if err != nil {
-		return fmt.Errorf("Failed to set Key: %s", err)
-	}
-
-	return nil
 }

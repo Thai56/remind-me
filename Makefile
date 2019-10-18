@@ -20,9 +20,6 @@ run:
 		make clean
 		$(GOBUILD) -v .
 		./$(BINARY_NAME)
-# deps:
-		# $(GOGET) github.com/markbates/goth
-		# $(GOGET) github.com/markbates/pop
 serve_static:		
 		./stop_serving.sh
 		docker build -f Dockerfile.web -t webserver-image:v1 .
@@ -31,5 +28,3 @@ sms_server:
 	$(GOCMD) run sms_main.go
 build_linux:
 	env GOOS=linux GOARCH=arm go build -v github.com/user/sms
-redis:
-	docker run -d -p 6379:6379 redis-server /conf/redis/redis1.conf

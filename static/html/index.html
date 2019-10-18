@@ -5,177 +5,254 @@
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <style>
+    * {
+        box-sizing: border-box;
+    }
+    #reminder-content{
+        margin: 10px 10px;
+        width: 30%;
+        height: 10vh;
+    }
+    
+    #set-time-btn{
+      width: 33vw;
+      margin-top: 25px;
+    }
+
+    #send-success{
+        color:lightseagreen;
+    }
+
+    .send-failure{
+        color: indianred;
+    }
+  </style>
 </head>
 <body>
   <div id="app">
    
-    <template>
-      <v-app id="sandbox">
-        <v-navigation-drawer
-          v-model="primaryDrawer.model"
-          :clipped="primaryDrawer.clipped"
-          :floating="primaryDrawer.floating"
-          :mini-variant="primaryDrawer.mini"
-          :permanent="primaryDrawer.type === 'permanent'"
-          :temporary="primaryDrawer.type === 'temporary'"
-          app
-          overflow
-        ></v-navigation-drawer>
+    <v-form v-model="valid">
+      <template>
+        <v-app id="sandbox">
+          <v-navigation-drawer
+            v-model="primaryDrawer.model"
+            :clipped="primaryDrawer.clipped"
+            :floating="primaryDrawer.floating"
+            :mini-variant="primaryDrawer.mini"
+            :permanent="primaryDrawer.type === 'permanent'"
+            :temporary="primaryDrawer.type === 'temporary'"
+            app
+            overflow
+          ></v-navigation-drawer>
 
-        <v-app-bar
-          :clipped-left="primaryDrawer.clipped"
-          app
-        >
-          <v-app-bar-nav-icon
-            v-if="primaryDrawer.type !== 'permanent'"
-            @click.stop="primaryDrawer.model = !primaryDrawer.model"
-          ></v-app-bar-nav-icon>
-          <v-toolbar-title>Remind Me</v-toolbar-title>
-        </v-app-bar>
+          <v-app-bar
+            :clipped-left="primaryDrawer.clipped"
+            app
+          >
+            <v-app-bar-nav-icon
+              v-if="primaryDrawer.type !== 'permanent'"
+              @click.stop="primaryDrawer.model = !primaryDrawer.model"
+            ></v-app-bar-nav-icon>
+            <v-toolbar-title>Remind Me</v-toolbar-title>
+          </v-app-bar>
 
-        <v-content>
-          <v-container fluid>
-            <v-row
-              align="center"
-              justify="center"
-            >
-              <v-col cols="10">
-                <v-card>
-                  <v-card-text>
-                    <v-row>
-                      <!-- Choose Destination Column -->
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <span>Choose Destination</span>
-                          <div v-for="user in users">
-                            <v-switch
-                              primary
-                              :label="user.name"
-                              :input-value="user.checked"
-                            ></v-switch>
-                          </div>
-
-                        <!-- Text Area -->
-                        <v-textarea
-                          v-model="model"
-                          label="Message"
-                          :auto-grow="autoGrow"
-                          :clearable="clearable"
-                          :counter="counter ? counter : false"
-                          :filled="filled"
-                          :flat="flat"
-                          :hint="hint"
-                          :label="label"
-                          :loading="loading"
-                          :no-resize="noResize"
-                          :outlined="outlined"
-                          :persistent-hint="persistentHint"
-                          :placeholder="placeholder"
-                          :rounded="rounded"
-                          :row-height="rowHeight"
-                          :rows="rows"
-                          :shaped="shaped"
-                          :single-line="singleLine"
-                          :solo="solo"
-                        ></v-textarea>
-                      </v-col>
-
-                       <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <!-- Choose Date  -->
-                        <span>Pick Date</span>
-                        <v-menu
-                          ref="nowMenu"
-                          v-model="nowMenu"
-                          :close-on-content-click="false"
-                          :nudge-right="40"
-                          :return-value.sync="now"
-                          transition="scale-transition"
-                          min-width="290px"
-                          offset-y
-                          full-width
+          <v-content>
+            <v-container fluid>
+              <v-row
+                align="center"
+                justify="center"
+              >
+                <v-col cols="10">
+                  <v-card>
+                    <v-card-text>
+                      <v-row>
+                        <!-- Choose Destination Column -->
+                        <v-col
+                          cols="12"
+                          md="6"
                         >
-                          <template v-slot:activator="{ on }">
-                            <v-text-field
-                              v-model="now"
-                              label="Today"
-                              readonly
-                              v-on="on"
-                            ></v-text-field>
-                          </template>
-                          <v-date-picker
-                            v-model="now"
-                            no-title
-                            scrollable
+                          <span>Choose Destination</span>
+                            <div v-for="user in users">
+                              <v-switch
+                                primary
+                                v-model="user.checked"
+                                :label="user.name"
+                                :input-value="user.checked"
+                                @change="updateTextAreaLabel()"
+                              ></v-switch>
+                            </div>
+
+                          <!-- Text Area -->
+                          <v-textarea
+                            v-model="content"
+                            label="Message"
+                            :auto-grow="autoGrow"
+                            :clearable="clearable"
+                            :counter="counter ? counter : false"
+                            :filled="filled"
+                            :flat="flat"
+                            :hint="hint"
+                            :label="textAreaLabel"
+                            :loading="loading"
+                            :no-resize="noResize"
+                            :outlined="outlined"
+                            :persistent-hint="persistentHint"
+                            :placeholder="placeholder"
+                            :rounded="rounded"
+                            :row-height="rowHeight"
+                            :rows="rows"
+                            :shaped="shaped"
+                            :single-line="singleLine"
+                            :solo="solo"
+                            required
+                          ></v-textarea>
+                        </v-col>
+
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <!-- Choose Date  -->
+                          <span>Pick Date</span>
+                          <v-menu
+                            ref="nowMenu"
+                            v-model="nowMenu"
+                            :close-on-content-click="false"
+                            :nudge-right="40"
+                            :return-value.sync="currentDate"
+                            transition="scale-transition"
+                            min-width="290px"
+                            offset-y
+                            full-width
                           >
-                            <div class="flex-grow-1"></div>
-                            <v-btn
-                              text
-                              color="primary"
-                              @click="nowMenu = false"
+                            <template v-slot:activator="{ on }">
+                              <v-text-field
+                                v-model="currentDate"
+                                label="Today"
+                                readonly
+                                v-on="on"
+                              ></v-text-field>
+                            </template>
+                            <v-date-picker
+                              v-model="currentDate"
+                              no-title
+                              scrollable
                             >
-                              Cancel
-                            </v-btn>
-                            <v-btn
-                              text
-                              color="primary"
-                              @click="$refs.nowMenu.save(now)"
-                            >
-                              OK
-                            </v-btn>
-                          </v-date-picker>
-                        </v-menu>
+                              <div class="flex-grow-1"></div>
+                              <v-btn
+                                text
+                                color="primary"
+                                @click="nowMenu = false"
+                              >
+                                Cancel
+                              </v-btn>
+                              <v-btn
+                                text
+                                color="primary"
+                                @click="$refs.nowMenu.save(now)"
+                              >
+                                OK
+                              </v-btn>
+                            </v-date-picker>
+                          </v-menu>
 
-                         <!-- Choose Time  -->
-                        <span>Pick Time</span>
-                        <template>
-                          <v-row align="center">
-                            <v-time-picker
-                              v-model="picker"
-                              class="mt-2"
-                              :disabled="disabled"
-                              :readonly="readonly"
-                              :landscape="landscape"
-                              :ampm-in-title="ampmInTitle"
-                              :use-seconds="useSeconds"
-                              :format="format"
-                              :full-width="fullWidth"
-                              :no-title="noTitle"
-                              :scrollable="scrollable"
-                            ></v-time-picker>
+                          <!-- Choose Time  -->
+                          <v-row justify="center">
+                            <v-dialog v-model="timeDialog" persistent max-width="600px">
+                              <template v-slot:activator="{ on }">
+                                <v-btn id="set-time-btn" color="primary" dark v-on="on">Set Time</v-btn>
+                              </template>
+                              <v-card>
+                                <v-card-title>
+                                  <span class="headline">Reminder Time</span>
+                                </v-card-title>
+                                <v-card-text>
+                                  <v-container>
+                                    <v-row justify="center">
+                                      <v-time-picker
+                                        v-model="currentTime"
+                                        v-bind:ampm-in-title="true"
+                                        format="ampm"
+                                      ></v-time-picker>
+                                    </v-row>
+                                  </v-container>
+                                </v-card-text>
+                                <v-card-actions>
+                                  <div class="flex-grow-1"></div>
+                                  <v-btn color="blue darken-1" text @click="timeDialog = false">Close</v-btn>
+                                  <v-btn color="blue darken-1" text @click="timeDialog = false">Save</v-btn>
+                                </v-card-actions>
+                              </v-card>
+                            </v-dialog>
                           </v-row>
-                        </template>
-
-                      </v-col>
-                    </v-row>
+                        </v-col>
+                      </v-row>
+                    </v-card-text>
+                    
+                    <v-card-actions>
+                      <div class="flex-grow-1"></div>
+                      <v-btn
+                        text
+                        color="primary"
+                        v-on:click="sendReminder"
+                      >Submit</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- Error Dialog -->
+              <v-dialog v-model="sendErr" persistent max-width="600px">
+                <v-card>
+                  <!--TITLE  -->
+                  <v-card-title>
+                    <span class="headline send-failure">Error Message</span>
+                  </v-card-title>
+                  <!-- TEXT -->
+                  <v-card-text>
+                    <span>{{ errWithSend }}</span>
                   </v-card-text>
+                  <!-- Actions -->
                   <v-card-actions>
                     <div class="flex-grow-1"></div>
-                    <v-btn text>Cancel</v-btn>
                     <v-btn
+                      color="blue darken-1" 
                       text
-                      color="primary"
-                    >Submit</v-btn>
+                      @click="closeErrorDialog"
+                    >Close</v-btn>
                   </v-card-actions>
                 </v-card>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-content>
+              </v-dialog>
+               
+               <!-- Success Snackbar -->
+              <v-snackbar
+                v-model="responseSaved"
+                color="success"
+                :timeout="6000"
+                :top="true"
+              >
+                Successfully Saved Reminder.
+                <v-btn
+                  dark
+                  text
+                  @click="responseSaved = false"
+                >
+                  Close
+                </v-btn>
+              </v-snackbar>
 
-        <v-footer
-          :inset="footer.inset"
-          app
-        >
-          <span class="px-4">&copy; {{ new Date().getFullYear() }}</span>
-        </v-footer>
-      </v-app>
-    </template>
+            </v-container>
+          </v-content>
 
+          <v-footer
+            :inset="footer.inset"
+            app
+          >
+            <span class="px-4">&copy; {{ new Date().getFullYear() }}</span>
+          </v-footer>
+        </v-app>
+      </template>
+    </v-form>
   </div>
 
 <!--Vue Dependencies -->
@@ -187,19 +264,35 @@
     // ====================== //
     // Business Logic Helpers //
     // ====================== //
-    function User(name, number, checked=false) {
+    function User(name, number, checked = false) {
         this.name = name;
         this.number = number;
         this.checked = checked;
     }
 
+    User.prototype.getNumber = function() {
+      return this.number;
+    }
+
+    User.prototype.isChecked = function() {
+      return this.checked;
+    }
+
+    User.prototype.getName = function() {
+      return this.name;
+    }
+
     function getLabelForTextArea(users) {
       let result = "";
-      for ([i, user] in users) {
-        if (user.checked) {
-          result += user.name;
-        }
+      if (users.length > 0) {
+        result += "To: "
       }
+      
+      users.forEach(v => {
+        if (v.isChecked()) {
+          result += `${v.getName()}, `;
+        }
+      });
 
       return result;
     }
@@ -212,40 +305,31 @@
     const stateDefaults = {
       getReminderDefaults() {
         return {
-          currentDate: formatDate(new Date()),
-          currentTime: formatTime(new Date()),
           content: "",
-          destination: '7073866800',
+          users: [
+            new User("Thai", "7073447433", true),
+            new User("Chipi", "7073866800"),
+          ],
           errWithSend: "",
+          sendErr: false,
           responseSaved: false,
+          valid: false,
         };
       },
       getUserDefaults() {
         return {
-          users: {
-            thai: new User("Thai", "7073447433", true),
-            chipsta: new User("Chipi", "7073866800"),
-          },
         };
       },
       getDatePickerDefaults() {
         return {
           nowMenu: false,
-          now: null,
+          currentDate: formatDate(new Date()),
         };
       },
       getTimePickerDefaults() {
         return {
-          picker: null,
-          disabled: false,
-          readonly: false,
-          landscape: true,
-          ampmInTitle: true,
-          useSeconds: false,
-          format: 'ampm',
-          fullWidth: false,
-          noTitle: false,
-          scrollable: true,
+          currentTime: formatTime(new Date()),
+          timeDialog: false,
         };
       },
       getTextAreaDefaults() {
@@ -257,7 +341,7 @@
           filled: true,
           flat: false,
           hint: '',
-          label: getLabelForTextArea(this.users),
+          textAreaLabel: getLabelForTextArea(this.getReminderDefaults().users),
           loading: false,
           model: '',
           noResize: false,
@@ -298,10 +382,7 @@
   // ===================== //
   // Date and Time Helpers //
   // ===================== //
-   // ------------ //
-    // Date Helpers //
-    // ------------ //
-    
+
     function formatTime(date) {
         const d = new Date(date); 
         const hours = d.getHours();
@@ -363,6 +444,31 @@
   </script>
 
   <script>
+    // ============ //
+    // ERROR HELPER //
+    // ============ //
+
+    function ErrObj(message, state = null) {
+        this.message = message;
+        this.state = state;
+    }
+
+    ErrObj.prototype.log = function() {
+        console.error(`message: ${this.message} \n state: ${this.state} \n`);
+        return this;
+    }
+
+    ErrObj.prototype.throw = function() {
+        throw this.message;
+    }
+
+    ErrObj.prototype.message = function() {
+        return `${this.message}`;
+    }
+
+  </script>
+  
+  <script>
   // ================= //
   // Vue Logic Helpers //
   // ================= //
@@ -388,7 +494,7 @@
         try {
             const body = {
                 name: "Username",
-                destination: this.getDestination(),
+                destinations: this.getDestinations(),
                 content: this.getContent(),
                 expire: this.getUIDateTime(),
             };
@@ -401,72 +507,88 @@
                 },  
                 body: JSON.stringify(body),
             };
+            console.debug("Sending reminder body : ", body);
             const response = await fetch('http://localhost:8080/remind', request);
-            const myJson = await response.json();
-            console.log("res", JSON.stringify(myJson));
+            const res = await response.json();
+            if (res.error != null) {
+              new ErrObj(res.error.message, res.error.code)
+                .log().throw()
+            }
+            console.log("res", JSON.stringify(res));
             
             this.triggerSuccess();
         } catch (err){
             this.triggerError(err);
-        }
-        
-    },
-    triggerError: function (err) {
-        this.errWithSend = `${err}`;
-        setTimeout(() => {
-            this.errWithSend = "";
-        }, 8000);
-    },
-    triggerSuccess: function () {
-        this.responseSaved = true;
-        setTimeout(() => {
-            this.responseSaved = false;
+        }  
+      },
+      triggerError: function (err) {
+          this.sendErr = true;
+          this.errWithSend = `${err}`;
+      },
+      closeErrorDialog: function() {
+        this.sendErr = false;
+        this.errWithSend = "";
+      },
+      triggerSuccess: function () {
+          this.responseSaved = true;
+      },
+      closeSuccessDialog: function() {
+        this.responseSaved = false
+      },
+      resetState: function() {
+          const defaultState = stateDefaults.getReminderDefaults()
+          for (key in defaultState) {
+              this[key] = defaultState[key];
+          }
+      },
+      getUIDateTime: function() {
+          const timeData = this.currentTime.slice().split(":");
+          const hours = timeData[0];
+          const minutes = timeData[1];
 
-        }, 5000);
-    },
-    resetState: function() {
-        const defaultState = getDefaultState()
-        for (key in defaultState) {
-            this[key] = defaultState[key];
-        }
-    },
-    getUIDateTime: function() {
-        const timeData = this.currentTime.slice().split(":");
-        const hours = timeData[0];
-        const minutes = timeData[1];
+          const currentDate = this.currentDate.slice();
+          const formattedDate = formatMMDDYYY(currentDate);
+          const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
 
-        const currentDate = this.currentDate.slice();
-        const formattedDate = formatMMDDYYY(currentDate);
-        const date = getAsDate(formattedDate, formatAMPM(hours, minutes));
+          if (date.getTime() < new Date().getTime()) {
+              return new ErrObj(`Time has been surpassed ${new Date(date.getTime())}`, this.currentTime)
+                  .log()
+                  .throw();
+          }
 
-        if (date.getTime() < new Date().getTime()) {
-            return new ErrObj(`Time has been surpassed ${new Date(date.getTime())}`, this.currentTime)
-                .log()
-                .throw();
-        }
+          return date.getTime();
+      },
+      getDestinations: function() {
+        const phoneNumbers = this.users.reduce((acc, v) => {
+          if (v.isChecked()) {
+            acc.push(v.getNumber());
+          }
 
-        return date.getTime();
-    },
-    getDestination: function() {
-        if (this.destination.length !== getDefaultState().destination.length) {
+          return acc;
+        }, []);
+
+        if (phoneNumbers.length === 0) {
             return new ErrObj(
-                'Failed precondition. Please check the destination phone number.',
-                this.destination
+                'Failed precondition. \nPlease check the destinations phone number.',
+                phoneNumbers
             ).log().throw();
         }
 
-        return this.destination;
-    },
-    getContent: function() {
-        if (!this.content) {
-            return new ErrObj(
-                'Failed precondition. Please check the message content textbox.',
-                this.content
-            ).log().throw();
-        }
+        return phoneNumbers;
+      },
+      getContent: function() {
+          if (!this.content) {
+              return new ErrObj(
+                  'Failed precondition. \nPlease check the message content textbox.',
+                  this.content
+              ).log().throw();
+          }
 
-        return this.content;
-    },
+          return this.content;
+      },
+      updateTextAreaLabel() {
+        this.textAreaLabel = getLabelForTextArea(this.users)
+      },
     },
   })
     

@@ -9,7 +9,7 @@
 - [ ] - `v1` : `Oct, 6, 2019`.
 
 ## Technologies - Descriptions
-- [ ] Redis - Expire Mechanism, Storage
+- [ ] Redis - Expire Mechanism
 - [ ] Twilio API - sms
 - [ ] NGINX - Web Template Server
 - [ ] VueJS - Small Template embedded in html

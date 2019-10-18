@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"errors"
 
 	redis "github.com/garyburd/redigo/redis"
 	uuid "github.com/satori/go.uuid"
@@ -18,22 +19,27 @@ import (
 
 type Sender struct {
 	name        string
-	redisClient redis.Conn
+	pool *redis.Pool
 }
 
 func (s *Sender) Ping() (string, error) {
-	return redis.String(s.redisClient.Do("PING"))
+	conn := s.pool.Get()
+	defer conn.Close()
+	return redis.String(conn.Do("PING"))
 }
 
 func New(name string) *Sender {
-	c, err := redis.Dial("tcp", "127.0.0.1:6379")
-	if err != nil {
-		log.Fatal(err)
+	pool := &redis.Pool{
+		MaxIdle:     10,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", "127.0.0.1:6379")
+		},
 	}
 
 	return &Sender{
 		name:        name,
-		redisClient: c,
+		pool: pool,
 	}
 }
 
@@ -86,85 +92,144 @@ func SendRequest(body *strings.Reader) error {
 	return err
 }
 
+type Error struct {
+	message string
+	code int64
+}
+
 type MetaData struct {
 	Message     string
 	Destination string
 }
 
-// SetKeyWithExpire - stores a key with an expire time.
-func (s *Sender) SetKeyWithExpire(destination, message string, expireTime int64) error {
+func (s *Sender) SetKeyWithExpirerer(destination, message string, expireTime int64) error {
+	fmt.Println("Sender - Calling - SetKeyWithExpirerer Method ", destination)
+	
+	conn := s.pool.Get()
+	defer conn.Close()
+	
 	// generate unique key to store the meta data.
 	uuID := fmt.Sprintf("%x", uuid.Must(uuid.NewV4()))
-
-	_, err := s.redisClient.Do("Set", fmt.Sprintf("%s:%s", uuID, destination), message)
-	if err != nil {
-		return fmt.Errorf("Failed To set the key : %s :%s", uuID, err)
-	}
-
 	shadowKey := fmt.Sprintf("shadowkey:%s", uuID)
-	_, err = s.redisClient.Do("Set", shadowKey, expireTime)
+	conn.Send("MULTI")
+	conn.Send("Set", fmt.Sprintf("%s:%s", uuID, destination), message)
+	conn.Send("Set", shadowKey, time.Now().Unix())
+	conn.Send("PEXPIREAT", shadowKey, expireTime)
+	_, err := conn.Do("EXEC")
 	if err != nil {
-		return fmt.Errorf("Failed To set the key : %s :%s : ", uuID, err)
-
+		return err
 	}
-
-	_, err = s.redisClient.Do("PEXPIREAT", shadowKey, expireTime)
-	if err != nil {
-		return fmt.Errorf("Failed To expire the key : %s :%s : ", uuID, err)
-	}
-
-	// logMsg := fmt.Sprintf("Set key %s to expire at %s", shadowKey[len(shadowKey)-4:], convert.UnixToTimestamp(fmt.Sprintf("%d", expireTime)))
-
 
 	return nil
 }
 
 // GetMetaDataFor - finds all data for the key given and will return the result at zero index.
 func (s *Sender) GetMetaDataFor(key string) (*MetaData, error) {
-	matches, err := redis.ByteSlices(s.redisClient.Do("KEYS", fmt.Sprintf("%s:*", key)))
+	var errMsg string
+	var method string = "GetMetaDataFor" 
+
+	conn := s.pool.Get()
+	defer conn.Close()
+	
+	matches, err := redis.ByteSlices(conn.Do("KEYS", fmt.Sprintf("%s:*", key)))
 	if err != nil {
+		errMsg = fmt.Sprintf("Failed to find matching key for : %s : %s", key , err)
+		logFrom(method, errMsg)
 		return nil, fmt.Errorf("Failed find keys for %s : %s", key, err)
 	}
-
+	
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("No matches found for key: %s", key)
+		errMsg = fmt.Sprintf("No matches found for key : %s : %s",key , err)
+		logFrom(method, errMsg)
+		return nil, errors.New(errMsg)
 	}
-
+	
 	keyWithDestination := fmt.Sprintf("%s", matches[0])
 	destination := strings.Split(keyWithDestination, ":")[1]
-
-	message, err := redis.String(s.redisClient.Do("Get", keyWithDestination))
+	
+	message, err := redis.String(conn.Do("Get", keyWithDestination))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get message for key: %s : %s", key, err)
+		errMsg = fmt.Sprintf("Failed to get message for key: %s : %s", key, err)
+		logFrom(method, errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	return &MetaData{
 		Message:     message,
 		Destination: destination,
-	}, err
-
-}
-
-func (s *Sender) KeyExists(key string) (bool, error) {
-	fmt.Println("Checking if key exists", key)
-	exists, err := redis.Bool(s.redisClient.Do("EXISTS", key))
-
-	return exists, err
+		}, nil
 }
 
 func (s *Sender) RemoveAllInstancesOf(key string) error {
-	matches, err := redis.ByteSlices(s.redisClient.Do("KEYS", fmt.Sprintf("%s:*", key)))
-	if err != nil {
-		return fmt.Errorf("Failed find keys for %s : %s", key, err)
-	}
+	var errMsg string
 
+	conn := s.pool.Get()
+	defer conn.Close()
+
+	method := "RemoveAllInstancesOf"
+	matches, err := redis.ByteSlices(conn.Do("KEYS", fmt.Sprintf("%s:*", key)))
+	if err != nil {
+		errMsg = fmt.Sprintf("Failed find keys for %s : %s", key, err)
+		logFrom(method, errMsg)
+		return errors.New(errMsg)
+	}
+	
 	for _, b := range matches {
 		str := fmt.Sprintf("%s", b)
 		fmt.Println(str)
-		_, err := s.redisClient.Do("DEL", str)
+		_, err := conn.Do("DEL", str)
 		if err != nil {
-			fmt.Println("Failed to delete key ", key, " ", err)
+			errMsg := fmt.Sprintf("Failed to delete key : %s : %s", key, err)
+			logFrom(method, errMsg)
 		}
 	}
+
 	return err
+}
+
+func (s *Sender) HandleReminder(key string) error {
+	var err error
+	var errMsg string
+
+	// Logging variables
+	method := "HandleReminder"
+	shortKey := key[:len(key)-4]
+	
+	metadata, err := s.GetMetaDataFor(key)
+	if err != nil {
+		errMsg := fmt.Sprintf("Sender - Failed to get metadata for key: %s - %s", shortKey, err)
+		logFrom(method, errMsg)
+		return errors.New(errMsg)
+	}
+
+	if metadata.Destination == "" {
+		errMsg = fmt.Sprintf("No Destination found for key : %s", shortKey)
+		logFrom(method, errMsg)
+		return errors.New(errMsg)
+	}
+
+	logFrom(method, fmt.Sprintf("sending message : %s", metadata))
+	err = s.SendMessage(metadata.Destination, metadata.Message)
+	if err != nil {
+		errMsg = fmt.Sprintf("Failed to send message for %s : %s", metadata.Destination, err)
+		logFrom(method, errMsg)
+		return errors.New(errMsg)
+	}
+
+	err = s.RemoveAllInstancesOf(key)
+	if err != nil {
+		errMsg = fmt.Sprintf("Failed to delete key for key : %s : %s", shortKey, err)
+		logFrom(method, errMsg)
+		return errors.New(errMsg)
+	}
+
+	return nil
+}
+
+// ====== //
+// Logger //
+// ====== //
+
+func logFrom(method, msg string) {
+	log.Printf("Sender - %s - %s", msg, method)
 }
