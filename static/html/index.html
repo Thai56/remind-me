@@ -492,7 +492,8 @@
                 body: JSON.stringify(body),
             };
             console.debug("Sending reminder body : ", body);
-            const response = await fetch('http://localhost:8080/remind', request);
+            const originalURL = 'http://localhost:8080/remind';
+            const response = await fetch(originalURL, request);
             
             // trigger loading finished for text area
             this.textAreaLoading = false;
@@ -506,6 +507,7 @@
             
             this.triggerSuccess();
         } catch (err){
+            this.textAreaLoading = false;
             this.triggerError(err);
         }  
       },
