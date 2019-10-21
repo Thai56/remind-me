@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+ 
+
   <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
@@ -87,24 +89,15 @@
                           <v-textarea
                             v-model="content"
                             label="Message"
-                            :auto-grow="autoGrow"
-                            :clearable="clearable"
-                            :counter="counter ? counter : false"
-                            :filled="filled"
-                            :flat="flat"
-                            :hint="hint"
+                            counter
+                            :maxlength="100"
+                            :clearable="true"
+                            :filled="true"
                             :label="textAreaLabel"
-                            :loading="loading"
-                            :no-resize="noResize"
-                            :outlined="outlined"
-                            :persistent-hint="persistentHint"
+                            :loading="textAreaLoading"
                             :placeholder="placeholder"
-                            :rounded="rounded"
                             :row-height="rowHeight"
                             :rows="rows"
-                            :shaped="shaped"
-                            :single-line="singleLine"
-                            :solo="solo"
                             required
                           ></v-textarea>
                         </v-col>
@@ -136,6 +129,7 @@
                             </template>
                             <v-date-picker
                               v-model="currentDate"
+                              color="green lighten-1"
                               no-title
                               scrollable
                             >
@@ -150,7 +144,7 @@
                               <v-btn
                                 text
                                 color="primary"
-                                @click="$refs.nowMenu.save(now)"
+                                @click="$refs.nowMenu.save(currentDate)"
                               >
                                 OK
                               </v-btn>
@@ -161,7 +155,7 @@
                           <v-row justify="center">
                             <v-dialog v-model="timeDialog" persistent max-width="600px">
                               <template v-slot:activator="{ on }">
-                                <v-btn id="set-time-btn" color="primary" dark v-on="on">Set Time</v-btn>
+                                <v-btn id="set-time-btn" color="success" dark v-on="on">Set Time</v-btn>
                               </template>
                               <v-card>
                                 <v-card-title>
@@ -334,26 +328,13 @@
       },
       getTextAreaDefaults() {
         return {
-          autoGrow: true,
-          autofocus: true,
-          clearable: true,
           counter: 0,
-          filled: true,
-          flat: false,
-          hint: '',
           textAreaLabel: getLabelForTextArea(this.getReminderDefaults().users),
-          loading: false,
-          model: '',
-          noResize: false,
-          outlined: false,
-          persistentHint: false,
+          textAreaLoading: false,
           placeholder: 'do the dishes...',
-          rounded: false,
+          maxTextLength: 40,
           rowHeight: 24,
           rows: 1,
-          shaped: false,
-          singleLine: false,
-          solo: false,
         };
       },
       getLayoutDefaults() {
@@ -490,6 +471,9 @@
     }),
     methods: {
       sendReminder: async function (event) {
+        // trigger loading for text area
+        this.textAreaLoading = true;  
+        
         event.preventDefault();
         try {
             const body = {
@@ -509,6 +493,10 @@
             };
             console.debug("Sending reminder body : ", body);
             const response = await fetch('http://localhost:8080/remind', request);
+            
+            // trigger loading finished for text area
+            this.textAreaLoading = false;
+            
             const res = await response.json();
             if (res.error != null) {
               new ErrObj(res.error.message, res.error.code)
