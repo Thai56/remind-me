@@ -34,10 +34,9 @@ func  (a *Api) RegisterSender(s *sender.Sender) {
 
 func (a *Api) Serve() {
 	r := mux.NewRouter()
-	r.HandleFunc("/Hello", sayHello)
-	r.HandleFunc("/", sayHello)
-	r.HandleFunc("/remind", a.remind).Methods("POST")
+	r.HandleFunc("/remind", a.setReminder).Methods("POST")
 	r.HandleFunc("/ping", a.pingRedis).Methods("GET")
+	r.HandleFunc("/wiki", a.getWiki).Methods("GET")
 
 	corsOpts := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"}, //you service is available and allowed for this base url
@@ -51,10 +50,7 @@ func (a *Api) Serve() {
 			http.MethodHead,
 		},
 
-		AllowedHeaders: []string{
-			"*", //or you can your header key values which you are using in your application
-
-		},
+		AllowedHeaders: []string{"*"},
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", corsOpts.Handler(r)))

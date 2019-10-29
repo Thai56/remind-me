@@ -18,11 +18,14 @@
 
 
 ### Short Term Goals -
-- [ ] Test app live
-    - [ ] Create Issues when arise.
-- [ ] Set Up Logging
-- [ ] Handle Errors
+- [x] Test app live
+- [x] Set Up Logging
+- [x] Handle Errors
 - [ ] Garbage handler for db expired calls past due
+- [ ] New sms features.
+    - [ ] Frontend will have routingb etween apps.
+    - [ ] Backend receives sms and handle by wiki bot.
+
 
 
 ### Controlling the App 
