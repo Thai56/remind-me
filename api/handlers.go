@@ -96,16 +96,8 @@ func (a *Api) setReminder(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type WikiParams struct {
-	Action string `json:"action"`
-	Search string `json:"search"`
-	Limit string `json:"limit"`
-	Namespace string `json:"namespace"`
-	Format string `json:"format"`
-}
-
 func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
-	keys, ok := r.URL.Query()["openSearch"]	
+	keys, ok := r.URL.Query()["search"]
 	if !ok || len(keys[0]) < 1 {
 		log.Println("Url Param 'key' is missing")
 		// TODO: Error
@@ -159,21 +151,38 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	}
 
 	title := results[0].(string)
-	otherNames := UntypedStringList{ untyped: results[1] }
-	info := UntypedStringList{ untyped: results[2] }
-	references := UntypedStringList{ untyped: results[3] }
+	otherNames := newUntyped(results[1])
+	info := newUntyped(results[2])
+	references := newUntyped(results[3])
 	
 	fmt.Println("results:", title, otherNames.convertToList(), info.convertToList(), references.convertToList()[:2])
 }
 
-type UntypedStringList struct {
-	untyped interface{}
+func newUntyped(t interface{}) Untyped {
+	return Untyped{
+		t: t,
+	}
+}
+type Untyped struct {
+	t interface{}
 }
 
-func (u *UntypedStringList) convertToList() []string {
+func (u *Untyped) convertToList() []string {
 	result := []string{}
-	for _, val := range u.untyped.([]interface{}) {
+	for _, val := range u.t.([]interface{}) {
 		result = append(result, val.(string))
 	}
 	return result
+}
+
+
+func PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Handlers - Calling - %s - PingIncomingMessage", body)
 }
