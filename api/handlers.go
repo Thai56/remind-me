@@ -176,7 +176,7 @@ func (u *Untyped) convertToList() []string {
 }
 
 
-func PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
+func(a *Api) PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
