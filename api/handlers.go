@@ -97,15 +97,31 @@ func (a *Api) setReminder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
-	keys, ok := r.URL.Query()["search"]
-	if !ok || len(keys[0]) < 1 {
-		log.Println("Url Param 'key' is missing")
-		// TODO: Error
-        return
-    }
+	// keys, ok := r.URL.Query()["search"]
+	// if !ok || len(keys[0]) < 1 {
+	// 	log.Println("Url Param 'key' is missing")
+	// 	// TODO: Error
+    //     return
+    // }
 	
-	key := keys[0]
+	// key := keys[0]
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
 	
+	log.Println("Handlers - Calling - getWiki")
+	u, err := url.Parse(string(body))
+	if err != nil {
+		log.Printf("Handers - Failed to parse body : %s - getWiki", err)
+		http.Error(w, "can't parse body", http.StatusBadRequest)
+		return
+	}
+	q := u.Query()
+	key := q["Body"][0]
 	logMsg := fmt.Sprintf("API Handlers - Calling - Search : %s - getWiki", key)
 	log.Println(logMsg)
 	
@@ -139,7 +155,7 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 		p.Error = responseErr
 	}
 	
-	body, err := ioutil.ReadAll(response.Body)
+	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -177,6 +193,7 @@ func (u *Untyped) convertToList() []string {
 
 
 func(a *Api) PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
+	log.Println("Handlers - Calling - PingIncomingMessage")
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
@@ -184,5 +201,5 @@ func(a *Api) PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Handlers - Calling - %s - PingIncomingMessage", body)
+	log.Printf("Handlers - Body - %s - PingIncomingMessage", body)
 }
