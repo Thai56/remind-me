@@ -37,6 +37,7 @@ func (a *Api) Serve() {
 	r.HandleFunc("/remind", a.setReminder).Methods("POST")
 	r.HandleFunc("/ping", a.pingRedis).Methods("GET")
 	r.HandleFunc("/wiki", a.getWiki).Methods("GET")
+	r.HandleFunc("/rest", a.PingIncomingMessage).Methods("POST")
 
 	corsOpts := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"}, //you service is available and allowed for this base url
