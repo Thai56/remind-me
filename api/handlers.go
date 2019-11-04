@@ -129,7 +129,14 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	}
 
 	key := strings.Replace(message.Body, " ", "+", -1)
-	log.Println("API Handlers - Calling - Search : %s - getWiki", key)
+	log.Println("API Handlers - Calling - Search : key %s - from %s - getWiki", key, message.From)
+
+	if strings.ToLower(strings.Split(key, " ")[0]) != "wiki" {
+		errMsg := fmt.Sprintf("No Command found for key: %s", key)
+		log.Printf(errMsg)
+		http.Error(w, errMsg, http.StatusPreconditionFailed)
+		return
+	}
 	
 	params := map[string]string{
 		"action": "opensearch",
@@ -176,6 +183,8 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	otherNames := newUntyped(results[1])
 	info := newUntyped(results[2])
 	references := newUntyped(results[3])
+
+	a.sender.SendMessage(message.From, strings.Join(info.convertToList(), " "))
 	
 	fmt.Println("results:", title, otherNames.convertToList(), info.convertToList(), references.convertToList())
 }
