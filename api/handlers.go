@@ -7,6 +7,7 @@ import (
 	"sync"
 	"log"
 	"net/url"
+	"strings"
 	"io/ioutil"
 )
 
@@ -126,18 +127,16 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	if message.Body == "" {
 		log.Fatal("No Body found in request")
 	}
-	
-	log.Printf("Handlers - Key: %s - getWiki", message.Body)
-		
-	logMsg := fmt.Sprintf("API Handlers - Calling - Search : %s - getWiki", message.Body)
-	log.Println(logMsg)
+
+	key := strings.Replace(message.Body, " ", "+", -1)
+	log.Println("API Handlers - Calling - Search : %s - getWiki", key)
 	
 	params := map[string]string{
 		"action": "opensearch",
-		"search": url.QueryEscape(message.Body),
+		"search": url.QueryEscape(key),
 		"format": "json",
 		"limit": "3",
-	};
+	}
 	wikiUrl := "https://en.wikipedia.org/w/api.php?action=opensearch" // &search=Nelson%20Mandela&format=json&limit=5"
 
 	for k, v := range params {
@@ -178,7 +177,7 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	info := newUntyped(results[2])
 	references := newUntyped(results[3])
 	
-	fmt.Println("results:", title, otherNames.convertToList(), info.convertToList(), references.convertToList()[:2])
+	fmt.Println("results:", title, otherNames.convertToList(), info.convertToList(), references.convertToList())
 }
 
 func newUntyped(t interface{}) Untyped {
