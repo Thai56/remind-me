@@ -112,22 +112,29 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't read body", http.StatusBadRequest)
 		return
 	}
-	
-	log.Println("Handlers - Calling - getWiki")
-	u, err := url.Parse(string(body))
+
+	log.Printf("BODY: %s", body)
+
+	message, err := NewInboundSMS(string(body))
 	if err != nil {
-		log.Printf("Handers - Failed to parse body : %s - getWiki", err)
-		http.Error(w, "can't parse body", http.StatusBadRequest)
+		http.Error(w, "can parse query", http.StatusUnprocessableEntity)
 		return
 	}
-	q := u.Query()
-	key := q["Body"][0]
-	logMsg := fmt.Sprintf("API Handlers - Calling - Search : %s - getWiki", key)
+
+	log.Printf("%+v", message)
+	
+	if message.Body == "" {
+		log.Fatal("No Body found in request")
+	}
+	
+	log.Printf("Handlers - Key: %s - getWiki", message.Body)
+		
+	logMsg := fmt.Sprintf("API Handlers - Calling - Search : %s - getWiki", message.Body)
 	log.Println(logMsg)
 	
 	params := map[string]string{
 		"action": "opensearch",
-		"search": url.QueryEscape(key),
+		"search": url.QueryEscape(message.Body),
 		"format": "json",
 		"limit": "3",
 	};
@@ -190,6 +197,63 @@ func (u *Untyped) convertToList() []string {
 	}
 	return result
 }
+
+
+func NewInboundSMS(body string) (*InboundSMS, error) {
+	q, err := url.ParseQuery(body)
+	if err != nil {
+		log.Printf("Failed to Parse Query: %v", err)
+		return nil, err
+	}
+	values := map[string]string{}
+	for key, _ := range q {
+		values[key] = q.Get(key)
+	}
+
+	js, err := json.Marshal(values)
+	if err != nil {
+	    panic(err)
+	}
+	log.Printf("Marshalled %s", js)
+	e := &InboundSMS{}
+	err = json.Unmarshal(js, e) 
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("RETURNING: %+v", e)
+	return e, nil
+}
+
+type InboundSMS struct {
+	ToCountry string `json:"ToCountry"`
+	ToState string `json:"ToState"`
+	SmsMessageSid string `json:"SmsMessageSid"`
+	NumMedia string `json:"NumMedia"`
+	ToCity string `json:"ToCity"`
+	FromCity string `json:"FromCity"`
+	Body string `json:"Body"`
+	From string `json:"From"`
+	// ToCountry=US
+	// ToState=WI
+	// SmsMessageSid=SM581f52e533511ac147ae7c4d9a4c9d89
+	// NumMedia=0
+	// ToCity=LA+CROSSE
+	// FromZip=94535
+	// SmsSid=SM581f52e533511ac147ae7c4d9a4c9d89
+	// FromState=CA
+	// SmsStatus=received
+	// FromCity=FAIRFIELD
+	// Body=Wiki+Donald+trump
+	// FromCountry=US
+	// To=%2B16084332365
+	// ToZip=54650
+	// NumSegments=1
+	// MessageSid=SM581f52e533511ac147ae7c4d9a4c9d89
+	// AccountSid=ACf8513108c1afe25b2cf5616f8d8ff8fb
+	// From=%2B17073447433
+	// ApiVersion=2010-04-01
+}
+
 
 
 func(a *Api) PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
