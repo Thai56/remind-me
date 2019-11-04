@@ -131,12 +131,12 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 	key := strings.Replace(message.Body, " ", "+", -1)
 	log.Printf("API Handlers - Calling - Search : key %s - from %s - getWiki", key, message.From)
 
-	if strings.ToLower(strings.Split(key, " ")[0]) != "wiki" {
-		errMsg := fmt.Sprintf("No Command found for key: %s", key)
-		log.Printf(errMsg)
-		http.Error(w, errMsg, http.StatusPreconditionFailed)
-		return
-	}
+	// if strings.ToLower(strings.Split(key, " ")[0]) != "wiki" {
+	// 	errMsg := fmt.Sprintf("No Command found for key: %s", key)
+	// 	log.Printf(errMsg)
+	// 	http.Error(w, errMsg, http.StatusPreconditionFailed)
+	// 	return
+	// }
 	
 	params := map[string]string{
 		"action": "opensearch",
