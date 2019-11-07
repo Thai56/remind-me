@@ -2,6 +2,7 @@ package sender
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-	"errors"
 
 	redis "github.com/garyburd/redigo/redis"
 	uuid "github.com/satori/go.uuid"
@@ -18,7 +18,7 @@ import (
 )
 
 type Sender struct {
-	name        string
+	name string
 	pool *redis.Pool
 }
 
@@ -38,7 +38,7 @@ func New(name string) *Sender {
 	}
 
 	return &Sender{
-		name:        name,
+		name: name,
 		pool: pool,
 	}
 }
@@ -94,7 +94,7 @@ func SendRequest(body *strings.Reader) error {
 
 type Error struct {
 	message string
-	code int64
+	code    int64
 }
 
 type MetaData struct {
@@ -104,10 +104,10 @@ type MetaData struct {
 
 func (s *Sender) SetKeyWithExpirerer(destination, message string, expireTime int64) error {
 	fmt.Println("Sender - Calling - SetKeyWithExpirerer Method ", destination)
-	
+
 	conn := s.pool.Get()
 	defer conn.Close()
-	
+
 	// generate unique key to store the meta data.
 	uuID := fmt.Sprintf("%x", uuid.Must(uuid.NewV4()))
 	shadowKey := fmt.Sprintf("shadowkey:%s", uuID)
@@ -126,27 +126,27 @@ func (s *Sender) SetKeyWithExpirerer(destination, message string, expireTime int
 // GetMetaDataFor - finds all data for the key given and will return the result at zero index.
 func (s *Sender) GetMetaDataFor(key string) (*MetaData, error) {
 	var errMsg string
-	var method string = "GetMetaDataFor" 
+	var method string = "GetMetaDataFor"
 
 	conn := s.pool.Get()
 	defer conn.Close()
-	
+
 	matches, err := redis.ByteSlices(conn.Do("KEYS", fmt.Sprintf("%s:*", key)))
 	if err != nil {
-		errMsg = fmt.Sprintf("Failed to find matching key for : %s : %s", key , err)
+		errMsg = fmt.Sprintf("Failed to find matching key for : %s : %s", key, err)
 		logFrom(method, errMsg)
 		return nil, fmt.Errorf("Failed find keys for %s : %s", key, err)
 	}
-	
+
 	if len(matches) == 0 {
-		errMsg = fmt.Sprintf("No matches found for key : %s : %s",key , err)
+		errMsg = fmt.Sprintf("No matches found for key : %s : %s", key, err)
 		logFrom(method, errMsg)
 		return nil, errors.New(errMsg)
 	}
-	
+
 	keyWithDestination := fmt.Sprintf("%s", matches[0])
 	destination := strings.Split(keyWithDestination, ":")[1]
-	
+
 	message, err := redis.String(conn.Do("Get", keyWithDestination))
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to get message for key: %s : %s", key, err)
@@ -157,7 +157,7 @@ func (s *Sender) GetMetaDataFor(key string) (*MetaData, error) {
 	return &MetaData{
 		Message:     message,
 		Destination: destination,
-		}, nil
+	}, nil
 }
 
 func (s *Sender) RemoveAllInstancesOf(key string) error {
@@ -173,7 +173,7 @@ func (s *Sender) RemoveAllInstancesOf(key string) error {
 		logFrom(method, errMsg)
 		return errors.New(errMsg)
 	}
-	
+
 	for _, b := range matches {
 		str := fmt.Sprintf("%s", b)
 		fmt.Println(str)
@@ -194,7 +194,7 @@ func (s *Sender) HandleReminder(key string) error {
 	// Logging variables
 	method := "HandleReminder"
 	shortKey := key[:len(key)-4]
-	
+
 	metadata, err := s.GetMetaDataFor(key)
 	if err != nil {
 		errMsg := fmt.Sprintf("Sender - Failed to get metadata for key: %s - %s", shortKey, err)
