@@ -11,6 +11,10 @@ import (
 	"sync"
 )
 
+const (
+	maxLength int = 384
+)
+
 type Message struct {
 	Sid          string   `json:"sid"`
 	Name         string   `json:"name"`
@@ -124,12 +128,12 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 
 	separatedQuery := strings.Split(key, " ")
 	if keyword := strings.ToLower(separatedQuery[0]); keyword != "wiki" {
-		errMsg := fmt.Sprintf("No Command found for %s. Try typing wiki followed by your keyword : %s :)", key, keyword)
+		errMsg := fmt.Sprintf("Command not found for key %s keyword %s", key, keyword)
 		log.Printf(errMsg)
 		http.Error(w, errMsg, http.StatusPreconditionFailed)
-		err = a.sender.SendMessage(message.From, errMsg)
+		err = a.sender.SendMessage(message.From, fmt.Sprintf("I don't recognize that command.\n Did you mean wiki %s?", key))
 		if err != nil {
-			fmt.Println(":Failed To send message when there was no keyword")
+			fmt.Println("Failed To send message when there was no keyword")
 		}
 		return
 	}
@@ -202,7 +206,9 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(msgInfo) == "" {
 		fmt.Println("No Message Info Results")
-		msgInfo = fmt.Sprintf("Could not find any results for %s. Did you mean %+v?", title, otherNames.convertToList())
+		msgInfo = fmt.Sprintf("Could not find any results for %s. Did you mean %+v?", title, strings.Join(otherNames.convertToList(), " or "))
+	} else if len(msgInfo) > maxLength {
+		msgInfo = msgInfo[:maxLength]
 	}
 
 	err = a.sender.SendMessage(message.From, msgInfo)
