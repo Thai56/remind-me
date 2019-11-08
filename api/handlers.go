@@ -206,7 +206,7 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(msgInfo) == "" {
 		fmt.Println("No Message Info Results")
-		msgInfo = fmt.Sprintf("Could not find any results for %s. Did you mean %s?", title, strings.Join(otherNames.convertToList(), " or "))
+		msgInfo = fmt.Sprintf("Could not find any results for %s. Did you mean %+v?", title, otherNames.convertToList())
 	} else if messageLength := len(msgInfo); messageLength > maxLength {
 		msgInfo = msgInfo[:maxLength]
 		fmt.Println("length of message info %d was greater than %d", messageLength, maxLength)
