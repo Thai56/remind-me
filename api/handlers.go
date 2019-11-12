@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -113,42 +114,33 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 
 	message, err := NewInboundSMS(string(body))
 	if err != nil {
+		log.Fatalf("Failed to parse inbound sms: %s", err)
 		http.Error(w, "can parse query", http.StatusUnprocessableEntity)
 		return
 	}
 
-	log.Printf("%+v", message)
+	log.Printf("API Handlers - Calling - Search : key %s - from %s - getWiki", message.Body, message.From)
 
-	if message.Body == "" {
-		log.Fatal("No Body found in request")
-	}
-
-	key := strings.Replace(message.Body, "+", " ", -1)
-	log.Printf("API Handlers - Calling - Search : key %s - from %s - getWiki", key, message.From)
-
-	separatedQuery := strings.Split(key, " ")
+	separatedQuery := strings.Split(message.Body, " ")
 	if keyword := strings.ToLower(separatedQuery[0]); keyword != "wiki" {
-		errMsg := fmt.Sprintf("Command not found for key %s keyword %s", key, keyword)
+		errMsg := fmt.Sprintf("Command not found for key %s keyword %s", message.Body, keyword)
 		log.Printf(errMsg)
 		http.Error(w, errMsg, http.StatusPreconditionFailed)
-		err = a.sender.SendMessage(message.From, fmt.Sprintf("I don't recognize that command.\n Did you mean wiki %s?", key))
+		err = a.sender.SendMessage(message.From, fmt.Sprintf("I don't recognize that command.\n Did you mean wiki %s?", message.Body))
 		if err != nil {
 			fmt.Println("Failed To send message when there was no keyword")
 		}
 		return
 	}
 
-	key = strings.Join(separatedQuery[1:], " ")
-
-	key = url.QueryEscape(key)
-
 	params := map[string]string{
 		"action": "opensearch",
-		"search": key,
+		"search": url.QueryEscape(strings.Join(separatedQuery[1:], " ")),
 		"format": "json",
 		"limit":  "3",
 	}
-	wikiUrl := "https://en.wikipedia.org/w/api.php?action=opensearch" // &search=Nelson%20Mandela&format=json&limit=5"
+
+	wikiUrl := "https://en.wikipedia.org/w/api.php?action=opensearch"
 
 	for k, v := range params {
 		wikiUrl += fmt.Sprintf("&%s=%s", k, v)
@@ -170,7 +162,7 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 		}
 
 		p.Error = responseErr
-		smsErrorMsg := fmt.Sprintf("Sorry I Couldn't find anything for %s \n. Please try with a more descriptive search...", key)
+		smsErrorMsg := fmt.Sprintf("Sorry I Couldn't find anything for %s \n. Please try with a more descriptive search...", message.Body)
 		err = a.sender.SendMessage(message.From, smsErrorMsg)
 		if err != nil {
 			fmt.Println("Failed To send message when failed when wiki failed")
@@ -215,7 +207,9 @@ func (a *Api) getWiki(w http.ResponseWriter, r *http.Request) {
 
 	err = a.sender.SendMessage(message.From, msgInfo)
 	if err != nil {
-		fmt.Println("Failed to send message to sender")
+		errMsg := "Failed to send message to sender"
+		fmt.Println("API Handlers - %s:%s - getWiki", errMsg, err)
+		log.Fatalf("Failed to send")
 	}
 
 	fmt.Println("results:", title, otherNames.convertToList(), info.convertToList(), references.convertToList())
@@ -242,7 +236,7 @@ func (u *Untyped) convertToList() []string {
 func NewInboundSMS(body string) (*InboundSMS, error) {
 	q, err := url.ParseQuery(body)
 	if err != nil {
-		log.Printf("Failed to Parse Query: %v", err)
+		log.Printf("Api Handlers - Failed to Parse Query: %v - NewInboundSMS", err)
 		return nil, err
 	}
 	values := map[string]string{}
@@ -250,29 +244,44 @@ func NewInboundSMS(body string) (*InboundSMS, error) {
 		values[key] = q.Get(key)
 	}
 
-	js, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
+	log.Printf("Api Handlers - Values Map %s - NewInboundSMS", values, values["Body"])
+
+	messageBody := values["Body"]
+	if len(messageBody) == 0 || strings.TrimSpace(messageBody) == "" {
+		errMsg := fmt.Sprintf("Message not found in response from inbound sms.")
+		log.Printf("Api Handlers - %s \nvalues: %+v - NewInboundSMS", errMsg, values)
+		return nil, errors.New(errMsg)
 	}
-	log.Printf("Marshalled %s", js)
-	e := &InboundSMS{}
-	err = json.Unmarshal(js, e)
-	if err != nil {
-		panic(err)
+
+	res := &InboundSMS{
+		Body: messageBody,
 	}
-	log.Printf("RETURNING: %+v", e)
-	return e, nil
+
+	sender := values["From"]
+	if sender == "" {
+		errMsg := fmt.Sprintf("No source phone number found for inbound sms.")
+		log.Printf("Api Handlers - %s \nvalues: %+v - NewInboundSMS", errMsg, values)
+		return nil, errors.New(errMsg)
+	}
+
+	if res.BodyContainsPlusSeperators() {
+		log.Printf("Contained + sign %s", res.Body)
+		res.Body = strings.Replace(res.Body, "+", " ", -1)
+	}
+
+	res.From = sender
+	return res, nil
 }
 
 type InboundSMS struct {
-	ToCountry     string `json:"ToCountry"`
-	ToState       string `json:"ToState"`
-	SmsMessageSid string `json:"SmsMessageSid"`
-	NumMedia      string `json:"NumMedia"`
-	ToCity        string `json:"ToCity"`
-	FromCity      string `json:"FromCity"`
-	Body          string `json:"Body"`
-	From          string `json:"From"`
+	// ToCountry     string `json:"ToCountry"`
+	// ToState       string `json:"ToState"`
+	// SmsMessageSid string `json:"SmsMessageSid"`
+	// NumMedia      string `json:"NumMedia"`
+	// ToCity        string `json:"ToCity"`
+	// FromCity      string `json:"FromCity"`
+	Body string `json:"Body"`
+	From string `json:"From"`
 	// ToCountry=US
 	// ToState=WI
 	// SmsMessageSid=SM581f52e533511ac147ae7c4d9a4c9d89
@@ -292,6 +301,16 @@ type InboundSMS struct {
 	// AccountSid=ACf8513108c1afe25b2cf5616f8d8ff8fb
 	// From=%2B17073447433
 	// ApiVersion=2010-04-01
+}
+
+func (is *InboundSMS) BodyContainsPlusSeperators() bool {
+	for _, b := range is.Body {
+		if string(b) == "+" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (a *Api) PingIncomingMessage(w http.ResponseWriter, r *http.Request) {
