@@ -22,10 +22,11 @@
 - [x] Set Up Logging
 - [x] Handle Errors
 - [ ] Garbage handler for db expired calls past due
-- [ ] New sms features.
-    - [ ] Frontend will have routingb etween apps.
-    - [ ] Backend receives sms and handle by wiki bot.
-
+- [x] New sms features.
+    - [x] Backend receives sms and handle by wiki bot.
+- [] App for recipes.
+ 
+- [ ] Frontend will have routing between apps (RemindMe & MealPlanner).
 
 
 ### Controlling the App 
